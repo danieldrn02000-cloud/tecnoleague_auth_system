@@ -1,0 +1,8 @@
+//Permite indicar que roles pueden ejecutar una operación
+import { SetMetadata } from "@nestjs/common";
+import type { Rol } from "@prisma/client";
+
+export const ROLES_KEY = "roles";
+
+export const Roles = (...roles: Rol[]) =>
+  SetMetadata(ROLES_KEY, roles);

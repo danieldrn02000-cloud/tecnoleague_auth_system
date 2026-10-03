@@ -1,0 +1,32 @@
+{
+  "name": "tecnoleague-p26",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "front",
+    "back"
+  ],
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "setup": "node scripts/setup.mjs",
+    "dev": "concurrently -k -n BACK,FRONT -c cyan,green \"npm run dev -w back\" \"npm run dev -w front\"",
+    "build": "npm run build -w back && npm run build -w front",
+    "lint": "eslint front/src back/src",
+    "db:generate": "npm run db:generate -w back",
+    "db:migrate": "npm run db:migrate -w back",
+    "db:seed": "npm run db:seed -w back",
+    "db:studio": "npm run db:studio -w back",
+    "test:api": "node scripts/test-api.mjs"
+  },
+  "devDependencies": {
+    "concurrently": "9.2.4",
+    "eslint": "9.39.1",
+    "typescript-eslint": "8.48.1",
+    "typescript": "5.9.3"
+  },
+  "overrides": {
+    "deepmerge-ts": "8.0.2"
+  }
+}

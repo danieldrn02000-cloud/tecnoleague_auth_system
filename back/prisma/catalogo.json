@@ -1,0 +1,115 @@
+{
+  "categorias": ["Laptops", "Componentes", "Periféricos", "Gaming"],
+  "productos": [
+    {
+      "id": 1,
+      "nombre": "Laptop Pulse 15",
+      "marca": "TECNOLEAGUE",
+      "descripcion": "Potencia para jugar, programar y crear. Una laptop versátil para llevar tu setup a cualquier lugar. Producto de demostración; imagen ilustrativa.",
+      "precio": 18999,
+      "stock": 8,
+      "imagen": "/images/laptop.jpg",
+      "categoriaId": 1,
+      "especificaciones": "Pantalla Full HD de 15.6 pulgadas;Procesador de 8 núcleos;16 GB RAM DDR5;SSD NVMe de 512 GB;Gráficos dedicados de 6 GB"
+    },
+    {
+      "id": 2,
+      "nombre": "GeForce RTX 4060 8 GB",
+      "marca": "NVIDIA",
+      "descripcion": "Dale un impulso a tu PC con gráficos dedicados y ray tracing. Artículo de ejemplo para el catálogo académico; imagen ilustrativa.",
+      "precio": 6299,
+      "stock": 12,
+      "imagen": "/images/gpu.png",
+      "categoriaId": 2,
+      "especificaciones": "8 GB de memoria GDDR6;Arquitectura Ada Lovelace;DLSS 3;Interfaz PCI Express;Verificar compatibilidad de gabinete y fuente"
+    },
+    {
+      "id": 3,
+      "nombre": "Teclado mecánico Spectrum",
+      "marca": "TECNOLEAGUE",
+      "descripcion": "Cada tecla cuenta. Iluminación RGB y formato compacto para ganar espacio en tu escritorio. Producto e imagen de demostración.",
+      "precio": 1299,
+      "stock": 24,
+      "imagen": "/images/keyboard.jpg",
+      "categoriaId": 3,
+      "especificaciones": "Switches mecánicos;Iluminación RGB;Conexión USB;Formato compacto;Distribución de imagen ilustrativa"
+    },
+    {
+      "id": 4,
+      "nombre": "Audífonos Studio Black",
+      "marca": "TECNOLEAGUE",
+      "descripcion": "Concéntrate en cada detalle con un diseño cerrado y almohadillas acolchadas. Producto de demostración; imagen ilustrativa.",
+      "precio": 1599,
+      "stock": 16,
+      "imagen": "/images/headphones.jpg",
+      "categoriaId": 3,
+      "especificaciones": "Diseño over-ear;Conexión de 3.5 mm;Almohadillas acolchadas;Diadema ajustable;Audio estéreo"
+    },
+    {
+      "id": 5,
+      "nombre": "Kingston FURY Beast 32 GB",
+      "marca": "KINGSTON",
+      "descripcion": "Más espacio para tus proyectos y tus partidas. Memoria de ejemplo para un equipo de alto rendimiento; verifica compatibilidad antes de comprar.",
+      "precio": 2299,
+      "stock": 20,
+      "imagen": "/images/ram.jpg",
+      "categoriaId": 2,
+      "especificaciones": "32 GB de memoria DDR5;6000 MT/s;Formato DIMM;Disipador negro;Requiere placa compatible con DDR5"
+    },
+    {
+      "id": 6,
+      "nombre": "Control Xbox Carbon Black",
+      "marca": "XBOX",
+      "descripcion": "Un control para tus próximas partidas. Diseño ergonómico y agarre cómodo. Catálogo académico con fotografía ilustrativa.",
+      "precio": 1399,
+      "stock": 15,
+      "imagen": "/images/controller.jpg",
+      "categoriaId": 4,
+      "especificaciones": "Diseño ergonómico;Cruceta direccional;Dos sticks analógicos;Verificar compatibilidad con tu plataforma;Imagen ilustrativa"
+    },
+    {
+      "id": 7,
+      "nombre": "Laptop Pulse 15 Pro",
+      "marca": "TECNOLEAGUE",
+      "descripcion": "Más memoria y almacenamiento para tareas exigentes, desarrollo y juegos. Modelo ficticio de demostración.",
+      "precio": 23999,
+      "stock": 4,
+      "imagen": "/images/laptop.jpg",
+      "categoriaId": 1,
+      "especificaciones": "Pantalla Full HD de 15.6 pulgadas;Procesador de 8 núcleos;32 GB RAM DDR5;SSD NVMe de 1 TB;Gráficos dedicados de 8 GB"
+    },
+    {
+      "id": 8,
+      "nombre": "Control Xbox Robot White",
+      "marca": "XBOX",
+      "descripcion": "Un acabado claro para completar tu setup. Producto de ejemplo para practicar el flujo de compra.",
+      "precio": 1499,
+      "stock": 0,
+      "imagen": "/images/controller-white.jpg",
+      "categoriaId": 4,
+      "especificaciones": "Acabado blanco;Diseño ergonómico;Dos sticks analógicos;Cruceta direccional;Actualmente sin existencias"
+    },
+    {
+      "id": 9,
+      "nombre": "Teclado Spectrum Pro",
+      "marca": "TECNOLEAGUE",
+      "descripcion": "Un teclado compacto para un escritorio más cómodo. Modelo ficticio; comparte imagen ilustrativa con la línea Spectrum.",
+      "precio": 1799,
+      "stock": 9,
+      "imagen": "/images/keyboard.jpg",
+      "categoriaId": 3,
+      "especificaciones": "Switches mecánicos;RGB configurable;Cable USB desmontable;Formato compacto;Estructura reforzada"
+    },
+    {
+      "id": 10,
+      "nombre": "Audífonos Studio Pro",
+      "marca": "TECNOLEAGUE",
+      "descripcion": "Comodidad para sesiones largas de música y juego. Producto ficticio; imagen ilustrativa.",
+      "precio": 2199,
+      "stock": 7,
+      "imagen": "/images/headphones.jpg",
+      "categoriaId": 3,
+      "especificaciones": "Audio estéreo;Diseño cerrado;Almohadillas acolchadas;Diadema reforzada;Conexión de 3.5 mm"
+    }
+  ]
+}

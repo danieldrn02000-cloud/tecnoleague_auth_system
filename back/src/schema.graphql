@@ -1,0 +1,183 @@
+"""Roles disponibles para las cuentas de la tienda."""
+enum Rol { ADMIN CLIENTE }
+"""Etapas del pedido académico."""
+enum EstadoPedido { CONFIRMADO PREPARANDO ENTREGADO }
+"""Criterio de orden del catálogo."""
+enum OrdenProducto { RECIENTES PRECIO_ASC PRECIO_DESC }
+"""Agrupa productos relacionados."""
+type Categoria {
+  """Identificador en PostgreSQL."""
+  id: Int!
+  """Nombre visible."""
+  nombre: String!
+  """Productos activos de esta categoría."""
+  productos: [Producto!]!
+}
+"""Artículo disponible en TecnoLeague."""
+type Producto {
+  """Identificador del artículo."""
+  id: Int!
+  """Nombre comercial."""
+  nombre: String!
+  """Descripción del artículo."""
+  descripcion: String!
+  """Precio unitario en pesos mexicanos; incluye impuestos de demostración."""
+  precio: Float!
+  """Ruta de imagen local o URL HTTPS."""
+  imagen: String!
+  """Unidades disponibles."""
+  stock: Int!
+  """Marca del producto."""
+  marca: String!
+  """Características separadas por punto y coma."""
+  especificaciones: String!
+  """Categoría a la que pertenece."""
+  categoria: Categoria!
+}
+"""Cuenta de usuario autenticado."""
+type Usuario {
+  """Identificador del cliente."""
+  id: Int!
+  """Nombre del cliente."""
+  nombre: String!
+  """Correo del cliente."""
+  email: String!
+  """Rol definido por el servidor."""
+  rol: Rol!
+  """Historial relacionado con este cliente."""
+  pedidos: [Pedido!]!
+}
+"""Usuario y token de acceso devueltos al iniciar una sesión."""
+type Sesion {
+  token: String!
+  usuario: Usuario!
+}
+"""Compra persistida con sus renglones y precios históricos."""
+type Pedido {
+  """Identificador del pedido."""
+  id: Int!
+  """Referencia legible de la compra."""
+  folio: String!
+  """Fecha ISO 8601."""
+  fecha: String!
+  """Total calculado por el backend, en MXN."""
+  total: Float!
+  """Estado actual; confirmado no significa pagado."""
+  status: EstadoPedido!
+  """Nombre registrado para recibir el pedido."""
+  nombre: String!
+  """Correo de contacto del pedido."""
+  email: String!
+  """Dirección capturada en checkout."""
+  direccion: String!
+  """Pago al recibir, sin cobro real."""
+  metodoPago: String!
+  """Cliente al que pertenece."""
+  usuario: Usuario!
+  """Productos y cantidades compradas."""
+  detalles: [DetallePedido!]!
+}
+"""Renglón de la compra."""
+type DetallePedido {
+  """Identificador del renglón."""
+  id: Int!
+  """Cantidad comprada."""
+  cantidad: Int!
+  """Precio congelado al momento de comprar."""
+  precioUnitario: Float!
+  """Nombre histórico del producto."""
+  nombreProducto: String!
+  """Cantidad por precio unitario."""
+  subtotal: Float!
+  """Producto relacionado, incluso si después se da de baja."""
+  producto: Producto!
+}
+"""Página de productos y conteo total del filtro."""
+type PaginaProductos {
+  """Productos de la página solicitada."""
+  items: [Producto!]!
+  """Número de coincidencias sin limitar por página."""
+  total: Int!
+}
+"""Datos completos para crear o editar un producto."""
+input ProductoInput {
+  """Nombre de 1 a 120 caracteres."""
+  nombre: String!
+  """Descripción de 1 a 2000 caracteres."""
+  descripcion: String!
+  """Precio positivo con hasta dos decimales."""
+  precio: Float!
+  """Imagen local o URL HTTPS."""
+  imagen: String!
+  """Existencias enteras no negativas."""
+  stock: Int!
+  """Marca de hasta 80 caracteres."""
+  marca: String!
+  """Características separadas por punto y coma."""
+  especificaciones: String!
+  """ID de una categoría existente."""
+  categoriaId: Int!
+}
+"""Un producto y su cantidad; el precio nunca se recibe del cliente."""
+input RenglonInput {
+  """Identificador del producto."""
+  productoId: Int!
+  """Unidades, de 1 a 99."""
+  cantidad: Int!
+}
+"""Información para registrar una compra de demostración."""
+input PedidoInput {
+  """Nombre del destinatario."""
+  nombre: String!
+  """Correo de contacto."""
+  email: String!
+  """Dirección completa."""
+  direccion: String!
+  """UUID generado al enviar; permite reintentar sin duplicar el pedido."""
+  claveSolicitud: String!
+  """Contenido del carrito."""
+  renglones: [RenglonInput!]!
+}
+"""Datos mínimos para crear una cuenta de cliente."""
+input RegistroInput {
+  nombre: String!
+  email: String!
+  password: String!
+}
+"""Credenciales de acceso de un cliente."""
+input CredencialesInput {
+  email: String!
+  password: String!
+}
+"""Operaciones que solamente leen información."""
+type Query {
+  """Lista categorías, con posibilidad de seleccionar productos anidados."""
+  categorias: [Categoria!]!
+  """Consulta una categoría por su ID."""
+  categoria(id: Int!): Categoria!
+  """Catálogo filtrado y paginado: desde es un desplazamiento, no un número de página."""
+  productos(buscar: String = "", categoriaId: Int, limite: Int = 8, desde: Int = 0, orden: OrdenProducto = RECIENTES): PaginaProductos!
+  """Detalle de un producto activo."""
+  producto(id: Int!): Producto!
+  """Pedidos del usuario autenticado, del más reciente al más antiguo."""
+  pedidos: [Pedido!]!
+  """Perfil asociado al token Bearer de la sesión actual."""
+  usuarioActual: Usuario!
+  """Comprueba que la sesión pertenece a una cuenta ADMIN."""
+  verificarAdmin: Boolean!
+}
+"""Operaciones que modifican la base de datos."""
+type Mutation {
+  """Registra un cliente y devuelve un token para el servidor Astro."""
+  registrarUsuario(datos: RegistroInput!): Sesion!
+  """Valida credenciales y devuelve un token para el servidor Astro."""
+  iniciarSesion(datos: CredencialesInput!): Sesion!
+  """Crea un artículo; requiere sesión con rol ADMIN."""
+  crearProducto(datos: ProductoInput!): Producto!
+  """Actualiza un artículo; requiere sesión con rol ADMIN."""
+  actualizarProducto(id: Int!, datos: ProductoInput!): Producto!
+  """Da de baja un producto conservando los pedidos; requiere sesión con rol ADMIN."""
+  eliminarProducto(id: Int!): Boolean!
+  """Crea el pedido y descuenta stock en una transacción atómica."""
+  crearPedido(datos: PedidoInput!): Pedido!
+}

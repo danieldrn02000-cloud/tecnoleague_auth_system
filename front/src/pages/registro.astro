@@ -1,0 +1,16 @@
+---
+import { AuthForm } from "../components/AuthForm";
+import Layout from "../layouts/Layout.astro";
+import { getSessionUser, safeNext } from "../lib/server/graphql";
+
+const { user, invalid } = await getSessionUser(
+  Astro.cookies.get("tl_session")?.value,
+);
+if (invalid) Astro.cookies.delete("tl_session", { path: "/" });
+const next = safeNext(Astro.url.searchParams.get("next"));
+if (user) return Astro.redirect(next);
+---
+
+<Layout title="Crear cuenta">
+  <AuthForm client:load mode="registro" next={next} />
+</Layout>

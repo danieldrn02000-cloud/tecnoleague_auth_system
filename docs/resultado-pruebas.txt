@@ -1,0 +1,7 @@
+Validación tras migrar el frontend a Astro SSR y agregar autenticación:
+- Backend TypeScript build: OK.
+- Astro check y build SSR: OK.
+- Prueba de integración actualizada: pendiente de ejecutar contra una instancia local de PostgreSQL.
+- Flujo visual en navegador: pendiente de revisión final.
+
+La prueba de integración requiere el backend iniciado, PostgreSQL, migración y seed. El build local de Astro se verificó con Node 24 y el lockfile del repositorio.

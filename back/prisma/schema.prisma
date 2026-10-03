@@ -1,0 +1,76 @@
+generator client {
+  provider = "prisma-client-js"
+}
+datasource db {
+  provider = "postgresql"
+  url = env("DATABASE_URL")
+}
+enum Rol {
+  ADMIN
+  CLIENTE
+}
+enum EstadoPedido {
+  CONFIRMADO
+  PREPARANDO
+  ENTREGADO
+}
+model Categoria {
+  id Int @id @default(autoincrement())
+  nombre String @unique
+  productos Producto[]
+  @@map("categorias")
+}
+model Producto {
+  id Int @id @default(autoincrement())
+  nombre String
+  descripcion String
+  precio Decimal @db.Decimal(10, 2)
+  imagen String
+  stock Int
+  marca String
+  especificaciones String
+  activo Boolean @default(true)
+  categoriaId Int @map("categoria_id")
+  categoria Categoria @relation(fields: [categoriaId], references: [id])
+  detalles DetallePedido[]
+  @@index([categoriaId, activo])
+  @@map("productos")
+}
+model Usuario {
+  id Int @id @default(autoincrement())
+  nombre String
+  email String @unique
+  passwordHash String? @map("password_hash")
+  rol Rol @default(CLIENTE)
+  pedidos Pedido[]
+  @@map("usuarios")
+}
+model Pedido {
+  id Int @id @default(autoincrement())
+  fecha DateTime @default(now())
+  total Decimal @db.Decimal(12, 2)
+  status EstadoPedido @default(CONFIRMADO)
+  nombre String
+  email String
+  direccion String
+  metodoPago String @default("PAGO_AL_RECIBIR") @map("metodo_pago")
+  claveSolicitud String @unique @map("clave_solicitud")
+  huellaSolicitud String @map("huella_solicitud")
+  usuarioId Int @map("usuario_id")
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+  detalles DetallePedido[]
+  @@index([usuarioId, fecha])
+  @@map("pedidos")
+}
+model DetallePedido {
+  id Int @id @default(autoincrement())
+  cantidad Int
+  precioUnitario Decimal @db.Decimal(10, 2) @map("precio_unitario")
+  nombreProducto String @map("nombre_producto")
+  pedidoId Int @map("pedido_id")
+  pedido Pedido @relation(fields: [pedidoId], references: [id])
+  productoId Int @map("producto_id")
+  producto Producto @relation(fields: [productoId], references: [id])
+  @@index([pedidoId])
+  @@map("detalle_pedido")
+}

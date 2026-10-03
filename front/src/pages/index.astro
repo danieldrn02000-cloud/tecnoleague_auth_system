@@ -1,0 +1,14 @@
+---
+import Layout from "../layouts/Layout.astro";
+import { Storefront } from "../components/Storefront";
+import { getSessionUser } from "../lib/server/graphql";
+
+const { user, invalid } = await getSessionUser(
+  Astro.cookies.get("tl_session")?.value,
+);
+if (invalid) Astro.cookies.delete("tl_session", { path: "/" });
+---
+
+<Layout title="Tienda gamer">
+  <Storefront client:load currentUser={user} />
+</Layout>

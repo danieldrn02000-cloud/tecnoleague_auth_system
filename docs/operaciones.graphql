@@ -1,0 +1,56 @@
+# Ejecuta una operación a la vez en http://localhost:4000/graphql.
+# pedidos y usuarioActual requieren Authorization: Bearer <token>.
+# En la web, Astro guarda ese token en cookie HttpOnly y lo agrega al proxy.
+query CategoriasRelacionadas {
+  categorias { id nombre productos { id nombre stock categoria { nombre } } }
+}
+
+query Categoria {
+  categoria(id: 2) { id nombre productos { nombre precio stock } }
+}
+
+query CatalogoPaginado {
+  productos(buscar: "", limite: 4, desde: 0, orden: PRECIO_ASC) {
+    total
+    items { id nombre descripcion precio stock imagen categoria { id nombre } }
+  }
+}
+
+query Detalle {
+  producto(id: 1) { id nombre precio especificaciones categoria { nombre } }
+}
+
+query Historial {
+  pedidos {
+    id folio fecha total status
+    usuario { nombre rol }
+    detalles { nombreProducto cantidad precioUnitario subtotal producto { nombre } }
+  }
+}
+
+query SesionActual {
+  usuarioActual { id nombre email rol }
+}
+
+# Para CRUD: encabezado {"x-admin-key":"TecnoLeagueAdmin2026"}
+mutation CrearProducto($datos: ProductoInput!) {
+  crearProducto(datos: $datos) { id nombre precio stock }
+}
+# Variables:
+# {"datos":{"nombre":"Mouse Demo","marca":"TL","descripcion":"Producto de prueba.","precio":399,"stock":10,"imagen":"/images/keyboard.jpg","especificaciones":"USB;RGB","categoriaId":3}}
+
+mutation ActualizarProducto($id: Int!, $datos: ProductoInput!) {
+  actualizarProducto(id: $id, datos: $datos) { id nombre precio stock }
+}
+
+mutation EliminarProducto($id: Int!) {
+  eliminarProducto(id: $id)
+}
+
+# Usa un UUID distinto para CADA pedido nuevo. Reutilizarlo reintenta el mismo.
+# También requiere Authorization: Bearer <token> de una cuenta registrada.
+mutation RegistrarPedido($datos: PedidoInput!) {
+  crearPedido(datos: $datos) { id folio total detalles { cantidad precioUnitario producto { nombre } } }
+}
+# Variables:
+# {"datos":{"nombre":"Cliente Demo","email":"demo@example.test","direccion":"Calle de ejemplo 123, Guadalajara, 44100","claveSolicitud":"06d81b5a-0f4d-4ecb-9ba1-d62bb254ed01","renglones":[{"productoId":3,"cantidad":1}]}}

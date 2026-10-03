@@ -1,0 +1,24 @@
+---
+import { AuthForm } from "../components/AuthForm";
+import Layout from "../layouts/Layout.astro";
+import { getSessionUser, safeNext } from "../lib/server/graphql";
+
+const { user, invalid } = await getSessionUser(
+  Astro.cookies.get("tl_session")?.value,
+);
+if (invalid) Astro.cookies.delete("tl_session", { path: "/" });
+const next = safeNext(Astro.url.searchParams.get("next"));
+const reason = Astro.url.searchParams.get("reason");
+const notice =
+  reason === "checkout"
+    ? "Inicia sesión para completar tu compra."
+    : reason === "pedidos"
+      ? "Inicia sesión para consultar tus pedidos."
+      : reason === "sesion"
+        ? "Tu sesión ya no es válida. Inicia sesión de nuevo."
+        : "";
+---
+
+<Layout title="Iniciar sesión">
+  <AuthForm client:load mode="login" next={next} notice={notice} />
+</Layout>
