@@ -2,16 +2,10 @@ import "reflect-metadata";
 import "dotenv/config";
 import { NestFactory } from "@nestjs/core";
 import { AppModule } from "./app.module";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
-import { parse } from "dotenv";
-console.log("Directorio del backend:", process.cwd());
-console.log("Archivo .env indicado:", process.env.DOTENV_CONFIG_PATH ?? "No indicado");
-async function iniciar() {
-//const rutaEnv = resolve(process.cwd(), ".env");
-//const variablesArchivo = parse(readFileSync(rutaEnv));
 
+async function iniciar() {
   const app = await NestFactory.create(AppModule);
+
   app.enableCors({
     origin: [
       process.env.FRONTEND_ORIGIN || "http://localhost:5173",
@@ -19,16 +13,20 @@ async function iniciar() {
     ],
     allowedHeaders: ["Content-Type", "Authorization"],
     methods: ["GET", "POST", "OPTIONS"],
+    credentials: true,
   });
+
   app.enableShutdownHooks();
+
   const port = Number(process.env.PORT || 4000);
-  await app.listen(port, process.env.HOST || "127.0.0.1");
-  console.log(`TecnoLeague GraphQL: http://localhost:${port}/graphql`);
+
+  // Render necesita que el servidor escuche en todas las interfaces.
+  await app.listen(port, "0.0.0.0");
+
+  console.log(`TecnoLeague GraphQL escuchando en el puerto ${port}`);
 }
+
 iniciar().catch((error) => {
-  console.error(
-    "No se pudo iniciar el backend. Revisa back/.env, PostgreSQL y las migraciones.",
-    error,
-  );
+  console.error("No se pudo iniciar el backend.", error);
   process.exit(1);
 });
