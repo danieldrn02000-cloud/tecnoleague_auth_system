@@ -8,15 +8,9 @@ import { parse } from "dotenv";
 console.log("Directorio del backend:", process.cwd());
 console.log("Archivo .env indicado:", process.env.DOTENV_CONFIG_PATH ?? "No indicado");
 async function iniciar() {
-  const rutaEnv = resolve(process.cwd(), ".env");
-const variablesArchivo = parse(readFileSync(rutaEnv));
+//const rutaEnv = resolve(process.cwd(), ".env");
+//const variablesArchivo = parse(readFileSync(rutaEnv));
 
-console.log("Comprobación de configuración:", {
-  rutaEnv,
-  claveExisteEnArchivo: Boolean(variablesArchivo.MP_WEBHOOK_SECRET),
-  claveCargadaCoincideConArchivo:
-    process.env.MP_WEBHOOK_SECRET === variablesArchivo.MP_WEBHOOK_SECRET,
-});
   const app = await NestFactory.create(AppModule);
   app.enableCors({
     origin: [
