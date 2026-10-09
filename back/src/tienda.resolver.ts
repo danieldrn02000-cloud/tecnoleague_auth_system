@@ -70,6 +70,23 @@ export class AuthResolver {
     return this.auth.iniciarSesion(datos);
   }
 
+  @Mutation("solicitarRecuperacion") solicitarRecuperacion(
+    @Args("email") email: string,
+    @Context() ctx: RequestContext,
+  ) {
+    exigirPuenteAuth(ctx);
+    return this.auth.solicitarRecuperacion(email);
+  }
+
+  @Mutation("restablecerPassword") restablecerPassword(
+    @Args("token") token: string,
+    @Args("password") password: string,
+    @Context() ctx: RequestContext,
+  ) {
+    exigirPuenteAuth(ctx);
+    return this.auth.restablecerPassword(token, password);
+  }
+
   @Query("usuarioActual")
   @UseGuards(AuthGuard)
   usuarioActual(@Context() ctx: RequestContext) {
@@ -109,7 +126,7 @@ export class TiendaResolver {
   @Query("verificarAdmin")
   @UseGuards(AuthGuard, RolesGuard)
   @Roles("ADMIN")
-  verificarAdmin(@Context() ctx: RequestContext) {
+  verificarAdmin() {
     return true;
   }
   @Mutation("crearProducto")
@@ -119,7 +136,7 @@ export class TiendaResolver {
     @Args("datos") datos: ProductoInput,
     @Context() ctx: RequestContext,
   ) {
-    return this.tienda.crearProducto(datos);
+    return this.tienda.crearProducto(datos, obtenerUsuario(ctx).id);
   }
   @Mutation("actualizarProducto")
   @UseGuards(AuthGuard, RolesGuard)
@@ -127,7 +144,6 @@ export class TiendaResolver {
   actualizarProducto(
     @Args("id") id: number,
     @Args("datos") datos: ProductoInput,
-    @Context() ctx: RequestContext,
   ) {
     return this.tienda.actualizarProducto(id, datos);
   }
@@ -136,7 +152,6 @@ export class TiendaResolver {
   @Roles("ADMIN")
   eliminarProducto(
     @Args("id") id: number,
-    @Context() ctx: RequestContext,
   ) {
     return this.tienda.eliminarProducto(id);
   }
@@ -184,6 +199,21 @@ export class CategoriaResolver {
 @Resolver("Pedido")
 export class PedidoResolver {
   constructor(private readonly db: PrismaService) {}
+  @ResolveField("estadoPago")
+  async estadoPago(@Parent() pedido: Pedido & { pagos?: { estado: string }[] }) {
+    const pagos =
+      pedido.pagos ??
+      (await this.db.pago.findMany({
+        where: { pedidoId: pedido.id },
+        select: { estado: true },
+        orderBy: { actualizadoEn: "desc" },
+      }));
+    if (pagos.some((pago) => pago.estado === "REEMBOLSADO")) return "REEMBOLSADO";
+    if (pagos.some((pago) => pago.estado === "APROBADO")) return "APROBADO";
+    if (pagos.some((pago) => pago.estado === "RECHAZADO")) return "RECHAZADO";
+    if (pagos.some((pago) => pago.estado === "CANCELADO")) return "CANCELADO";
+    return "PENDIENTE";
+  }
   @ResolveField("folio") folio(@Parent() p: Pedido) {
     return `TL-${p.fecha.getFullYear()}-${String(p.id).padStart(4, "0")}`;
   }

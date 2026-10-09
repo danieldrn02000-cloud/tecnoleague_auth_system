@@ -15,6 +15,7 @@ export interface Producto {
   precio: number;
   imagen: string;
   stock: number;
+  stockMinimo?: number;
   marca: string;
   especificaciones: string;
   categoria: Categoria;

@@ -1,7 +1,10 @@
 """Roles disponibles para las cuentas de la tienda."""
 enum Rol { ADMIN CLIENTE }
 """Etapas del pedido académico."""
-enum EstadoPedido { CONFIRMADO PREPARANDO ENTREGADO }
+enum EstadoPedido { PENDIENTE PAGADO ENVIADO ENTREGADO CANCELADO }
+enum EstadoPago { PENDIENTE APROBADO RECHAZADO CANCELADO REEMBOLSADO }
+enum ProveedorPago { MERCADO_PAGO PAYPAL }
+enum TipoMovimientoInventario { INICIAL ENTRADA SALIDA AJUSTE PEDIDO CANCELACION }
 """Criterio de orden del catálogo."""
 enum OrdenProducto { RECIENTES PRECIO_ASC PRECIO_DESC }
 """Agrupa productos relacionados."""
@@ -27,6 +30,7 @@ type Producto {
   imagen: String!
   """Unidades disponibles."""
   stock: Int!
+  stockMinimo: Int!
   """Marca del producto."""
   marca: String!
   """Características separadas por punto y coma."""
@@ -72,10 +76,98 @@ type Pedido {
   direccion: String!
   """Pago al recibir, sin cobro real."""
   metodoPago: String!
+  """Estado derivado del proveedor registrado; no representa una confirmación manual."""
+  estadoPago: EstadoPago!
   """Cliente al que pertenece."""
   usuario: Usuario!
   """Productos y cantidades compradas."""
   detalles: [DetallePedido!]!
+}
+type PaginaPedidosAdmin {
+  items: [Pedido!]!
+  total: Int!
+}
+type AdminActor {
+  id: Int!
+  nombre: String!
+}
+type EventoEstadoPedido {
+  id: Int!
+  desde: EstadoPedido
+  hacia: EstadoPedido!
+  motivo: String
+  creadoEn: String!
+  actor: AdminActor!
+}
+type MovimientoInventario {
+  id: Int!
+  tipo: TipoMovimientoInventario!
+  cantidad: Int!
+  motivo: String!
+  creadoEn: String!
+  producto: Producto!
+  usuario: AdminActor
+}
+type PaginaMovimientos {
+  items: [MovimientoInventario!]!
+  total: Int!
+}
+type ClienteAdmin {
+  id: Int!
+  nombre: String!
+  email: String!
+  totalPedidos: Int!
+  gastoConfirmado: Float!
+  ultimaCompra: String
+  pedidos: [Pedido!]!
+}
+type PaginaClientesAdmin {
+  items: [ClienteAdmin!]!
+  total: Int!
+}
+type PagoAdmin {
+  id: Int!
+  proveedor: ProveedorPago!
+  estado: EstadoPago!
+  monto: Float!
+  moneda: String!
+  idOrdenExterna: String
+  idPagoExterno: String
+  estadoProveedor: String
+  creadoEn: String!
+  aprobadoEn: String
+  pedido: PagoPedido!
+}
+type PagoPedido {
+  id: Int!
+  fecha: String!
+  nombre: String!
+  email: String!
+  status: EstadoPedido!
+}
+type PaginaPagosAdmin {
+  items: [PagoAdmin!]!
+  total: Int!
+}
+type CategoriaAdmin {
+  id: Int!
+  nombre: String!
+  productosCount: Int!
+}
+type VentaDia {
+  fecha: String!
+  total: Float!
+}
+type DashboardAdmin {
+  ventasTotales: Float!
+  totalPedidos: Int!
+  pedidosPendientes: Int!
+  productosActivos: Int!
+  stockBajo: Int!
+  sinExistencias: Int!
+  ventasPorDia: [VentaDia!]!
+  pedidosRecientes: [Pedido!]!
+  movimientosRecientes: [MovimientoInventario!]!
 }
 """Renglón de la compra."""
 type DetallePedido {
@@ -111,6 +203,7 @@ input ProductoInput {
   imagen: String!
   """Existencias enteras no negativas."""
   stock: Int!
+  stockMinimo: Int = 5
   """Marca de hasta 80 caracteres."""
   marca: String!
   """Características separadas por punto y coma."""
@@ -165,6 +258,15 @@ type Query {
   usuarioActual: Usuario!
   """Comprueba que la sesión pertenece a una cuenta ADMIN."""
   verificarAdmin: Boolean!
+  adminDashboard(desde: String!, hasta: String!): DashboardAdmin!
+  adminPedidos(buscar: String = "", estado: EstadoPedido, metodoPago: String = "", fechaDesde: String, fechaHasta: String, desde: Int = 0, limite: Int = 20): PaginaPedidosAdmin!
+  adminPedido(id: Int!): Pedido!
+  historialPedido(id: Int!): [EventoEstadoPedido!]!
+  adminClientes(buscar: String = "", desde: Int = 0, limite: Int = 20): PaginaClientesAdmin!
+  adminCliente(id: Int!): ClienteAdmin!
+  adminPagos(buscar: String = "", estado: EstadoPago, desde: Int = 0, limite: Int = 20): PaginaPagosAdmin!
+  adminMovimientos(productoId: Int, desde: Int = 0, limite: Int = 20): PaginaMovimientos!
+  adminCategorias: [CategoriaAdmin!]!
 }
 """Operaciones que modifican la base de datos."""
 type Mutation {
@@ -172,6 +274,10 @@ type Mutation {
   registrarUsuario(datos: RegistroInput!): Sesion!
   """Valida credenciales y devuelve un token para el servidor Astro."""
   iniciarSesion(datos: CredencialesInput!): Sesion!
+  """Genera un enlace de recuperación; siempre responde true."""
+  solicitarRecuperacion(email: String!): Boolean!
+  """Cambia la contraseña con un token de recuperación válido."""
+  restablecerPassword(token: String!, password: String!): Boolean!
   """Crea un artículo; requiere sesión con rol ADMIN."""
   crearProducto(datos: ProductoInput!): Producto!
   """Actualiza un artículo; requiere sesión con rol ADMIN."""
@@ -180,4 +286,18 @@ type Mutation {
   eliminarProducto(id: Int!): Boolean!
   """Crea el pedido y descuenta stock en una transacción atómica."""
   crearPedido(datos: PedidoInput!): Pedido!
+  actualizarEstadoPedido(id: Int!, estado: EstadoPedido!, motivo: String): Pedido!
+  ajustarInventario(productoId: Int!, cantidad: Int!, tipo: TipoMovimientoInventario!, motivo: String!): Producto!
+  crearCategoria(nombre: String!): CategoriaAdmin!
+  actualizarCategoria(id: Int!, nombre: String!): CategoriaAdmin!
+  eliminarCategoria(id: Int!): Boolean!
+}
+
+"""Checkout de Mercado Pago; iniciar no equivale a aprobar el pago."""
+type InicioPago {
+  pagoId: Int!
+  checkoutUrl: String!
+}
+extend type Mutation {
+  iniciarPago(pedidoId: Int!): InicioPago!
 }

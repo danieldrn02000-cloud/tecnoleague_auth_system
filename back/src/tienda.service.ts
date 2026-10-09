@@ -110,6 +110,12 @@ export class TiendaService {
     )
       fallo("Stock inválido.");
     if (
+      !Number.isInteger(datos.stockMinimo) ||
+      datos.stockMinimo < 0 ||
+      datos.stockMinimo > 100000
+    )
+      fallo("El nivel mínimo de existencias debe estar entre 0 y 100000.");
+    if (
       !datos.marca.trim() ||
       datos.marca.length > 80 ||
       datos.especificaciones.length > 2000
@@ -135,17 +141,42 @@ export class TiendaService {
       precio: new Prisma.Decimal(datos.precio.toFixed(2)),
     };
   }
-  async crearProducto(datos: ProductoInput) {
-    return this.db.producto.create({
-      data: await this.validarProducto(datos),
-      include: { categoria: true },
+  async crearProducto(datos: ProductoInput, actorId: number) {
+    const producto = await this.validarProducto(datos);
+    return this.db.$transaction(async (tx) => {
+      const creado = await tx.producto.create({
+        data: producto,
+        include: { categoria: true },
+      });
+      if (creado.stock > 0) {
+        await tx.movimientoInventario.create({
+          data: {
+            productoId: creado.id,
+            usuarioId: actorId,
+            tipo: "INICIAL",
+            cantidad: creado.stock,
+            motivo: "Existencia inicial al crear el producto",
+          },
+        });
+      }
+      return creado;
     });
   }
   async actualizarProducto(id: number, datos: ProductoInput) {
     await this.producto(id);
+    const validado = await this.validarProducto(datos);
     return this.db.producto.update({
       where: { id },
-      data: await this.validarProducto(datos),
+      data: {
+        nombre: validado.nombre,
+        descripcion: validado.descripcion,
+        precio: validado.precio,
+        imagen: validado.imagen,
+        stockMinimo: validado.stockMinimo,
+        marca: validado.marca,
+        especificaciones: validado.especificaciones,
+        categoriaId: validado.categoriaId,
+      },
       include: { categoria: true },
     });
   }
@@ -237,7 +268,7 @@ export class TiendaService {
               nombreProducto: producto.nombre,
             });
           }
-          return tx.pedido.create({
+          const pedido = await tx.pedido.create({
             data: {
               usuarioId,
               nombre: datos.nombre.trim(),
@@ -250,6 +281,25 @@ export class TiendaService {
             },
             include: detallePedido,
           });
+          await tx.movimientoInventario.createMany({
+            data: detalles.map((detalle) => ({
+              productoId: detalle.productoId,
+              usuarioId,
+              pedidoId: pedido.id,
+              tipo: "PEDIDO",
+              cantidad: -detalle.cantidad,
+              motivo: `Salida por pedido ${pedido.id}`,
+            })),
+          });
+          await tx.eventoEstadoPedido.create({
+            data: {
+              pedidoId: pedido.id,
+              actorId: usuarioId,
+              hacia: "PENDIENTE",
+              motivo: "Pedido creado",
+            },
+          });
+          return pedido;
         },
         { maxWait: 10000, timeout: 15000 },
       );

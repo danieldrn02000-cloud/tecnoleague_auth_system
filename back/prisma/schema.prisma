@@ -10,9 +10,33 @@ enum Rol {
   CLIENTE
 }
 enum EstadoPedido {
-  CONFIRMADO
-  PREPARANDO
+  PENDIENTE
+  PAGADO
+  ENVIADO
   ENTREGADO
+  CANCELADO
+}
+
+enum EstadoPago {
+  PENDIENTE
+  APROBADO
+  RECHAZADO
+  CANCELADO
+  REEMBOLSADO
+}
+
+enum ProveedorPago {
+  MERCADO_PAGO
+  PAYPAL
+}
+
+enum TipoMovimientoInventario {
+  INICIAL
+  ENTRADA
+  SALIDA
+  AJUSTE
+  PEDIDO
+  CANCELACION
 }
 model Categoria {
   id Int @id @default(autoincrement())
@@ -30,9 +54,11 @@ model Producto {
   marca String
   especificaciones String
   activo Boolean @default(true)
+  stockMinimo Int @default(5) @map("stock_minimo")
   categoriaId Int @map("categoria_id")
   categoria Categoria @relation(fields: [categoriaId], references: [id])
   detalles DetallePedido[]
+  movimientos MovimientoInventario[]
   @@index([categoriaId, activo])
   @@map("productos")
 }
@@ -43,13 +69,16 @@ model Usuario {
   passwordHash String? @map("password_hash")
   rol Rol @default(CLIENTE)
   pedidos Pedido[]
+  movimientos MovimientoInventario[]
+  cambiosPedido EventoEstadoPedido[]
+  tokensRecuperacion TokenRecuperacion[]
   @@map("usuarios")
 }
 model Pedido {
   id Int @id @default(autoincrement())
   fecha DateTime @default(now())
   total Decimal @db.Decimal(12, 2)
-  status EstadoPedido @default(CONFIRMADO)
+  status EstadoPedido @default(PENDIENTE)
   nombre String
   email String
   direccion String
@@ -59,6 +88,9 @@ model Pedido {
   usuarioId Int @map("usuario_id")
   usuario Usuario @relation(fields: [usuarioId], references: [id])
   detalles DetallePedido[]
+  pagos Pago[]
+  cambiosEstado EventoEstadoPedido[]
+  movimientosInventario MovimientoInventario[]
   @@index([usuarioId, fecha])
   @@map("pedidos")
 }
@@ -73,4 +105,83 @@ model DetallePedido {
   producto Producto @relation(fields: [productoId], references: [id])
   @@index([pedidoId])
   @@map("detalle_pedido")
+}
+
+model EventoEstadoPedido {
+  id Int @id @default(autoincrement())
+  pedidoId Int @map("pedido_id")
+  pedido Pedido @relation(fields: [pedidoId], references: [id], onDelete: Restrict)
+  desde EstadoPedido?
+  hacia EstadoPedido
+  actorId Int @map("actor_id")
+  actor Usuario @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  motivo String?
+  creadoEn DateTime @default(now()) @map("creado_en")
+
+  @@index([pedidoId, creadoEn])
+  @@map("eventos_estado_pedido")
+}
+
+model MovimientoInventario {
+  id Int @id @default(autoincrement())
+  productoId Int @map("producto_id")
+  producto Producto @relation(fields: [productoId], references: [id], onDelete: Restrict)
+  usuarioId Int? @map("usuario_id")
+  usuario Usuario? @relation(fields: [usuarioId], references: [id], onDelete: Restrict)
+  pedidoId Int? @map("pedido_id")
+  pedido Pedido? @relation(fields: [pedidoId], references: [id], onDelete: Restrict)
+  tipo TipoMovimientoInventario
+  cantidad Int
+  motivo String
+  creadoEn DateTime @default(now()) @map("creado_en")
+
+  @@index([productoId, creadoEn])
+  @@index([pedidoId])
+  @@map("movimientos_inventario")
+}
+
+model Pago {
+  id Int @id @default(autoincrement())
+  pedidoId Int @map("pedido_id")
+  pedido Pedido @relation(fields: [pedidoId], references: [id], onDelete: Restrict)
+  proveedor ProveedorPago
+  estado EstadoPago @default(PENDIENTE)
+  monto Decimal @db.Decimal(12, 2)
+  moneda String @default("MXN")
+  idOrdenExterna String? @unique @map("id_orden_externa")
+  idPagoExterno String? @unique @map("id_pago_externo")
+  estadoProveedor String? @map("estado_proveedor")
+  claveIdempotencia String @unique @map("clave_idempotencia")
+  creadoEn DateTime @default(now()) @map("creado_en")
+  actualizadoEn DateTime @updatedAt @map("actualizado_en")
+  aprobadoEn DateTime? @map("aprobado_en")
+  eventos EventoPago[]
+
+  @@index([pedidoId])
+  @@map("pagos")
+}
+
+model EventoPago {
+  id Int @id @default(autoincrement())
+  pagoId Int @map("pago_id")
+  pago Pago @relation(fields: [pagoId], references: [id], onDelete: Restrict)
+  claveEvento String @unique @map("clave_evento")
+  tipo String
+  estadoReportado String? @map("estado_reportado")
+  recibidoEn DateTime @default(now()) @map("recibido_en")
+
+  @@index([pagoId])
+  @@map("eventos_pago")
+}
+
+model TokenRecuperacion {
+  id Int @id @default(autoincrement())
+  tokenHash String @unique @map("token_hash")
+  usuarioId Int @map("usuario_id")
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  expiraEn DateTime @map("expira_en")
+  usadoEn DateTime? @map("usado_en")
+  creadoEn DateTime @default(now()) @map("creado_en")
+  @@index([usuarioId])
+  @@map("tokens_recuperacion")
 }

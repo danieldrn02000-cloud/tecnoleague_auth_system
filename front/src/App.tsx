@@ -45,6 +45,19 @@ export default function App({
     "{categorias{id nombre}}",
   );
   const main = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const recargar = () => {
+      if (!document.hidden) retry();
+    };
+    const intervalo = setInterval(recargar, 30000);
+    window.addEventListener("focus", recargar);
+    document.addEventListener("visibilitychange", recargar);
+    return () => {
+      clearInterval(intervalo);
+      window.removeEventListener("focus", recargar);
+      document.removeEventListener("visibilitychange", recargar);
+    };
+  }, [retry]);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(
     () => () => {
@@ -325,7 +338,7 @@ useEffect(() => {
               <div>
                 <h2>¡Tu pedido está confirmado!</h2>
                 <p>
-                  {compra.folio} · {dinero(compra.total)} MXN · Pago al recibir.
+                  {compra.folio} · {dinero(compra.total)} MXN.
                 </p>
               </div>
               <button
@@ -404,7 +417,7 @@ useEffect(() => {
         <div>
           <h3>Tu compra</h3>
           <span>
-            <Truck size={15} /> Pago al recibir
+            <Truck size={15} /> Pago con Mercado Pago
           </span>
           <button onClick={() => navegar({ tipo: "carrito" })}>
             Mi carrito
@@ -412,7 +425,7 @@ useEffect(() => {
         </div>
         <div className="footer-bottom">
           <span>© {new Date().getFullYear()} TecnoLeague</span>
-          <span>Proyecto académico · MXN · Sin cobros reales</span>
+          <span>Proyecto académico · MXN</span>
         </div>
       </footer>
       {toast && (

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ArrowRight, Check, ChevronDown, Package } from "lucide-react";
-import { dinero, PEDIDO, useQuery } from "../api";
+import { dinero, graphql, PEDIDO, useQuery } from "../api";
 import { Cargando, ErrorCarga, Imagen, Vacio } from "../components/ui";
 import type { Navegar, Pedido } from "../types";
 export function Pedidos({ navegar }: { navegar: Navegar }) {
@@ -8,7 +8,28 @@ export function Pedidos({ navegar }: { navegar: Navegar }) {
     `query Historial{pedidos{${PEDIDO}}}`,
   );
   const [abierto, setAbierto] = useState<number | null>(null);
-  
+  const [pagando, setPagando] = useState<number | null>(null);
+  const [errorPago, setErrorPago] = useState("");
+
+  async function continuarPago(pedidoId: number) {
+    setPagando(pedidoId);
+    setErrorPago("");
+    try {
+      const { iniciarPago } = await graphql<{
+        iniciarPago: { checkoutUrl: string };
+      }>(
+        `mutation Pagar($pedidoId:Int!){iniciarPago(pedidoId:$pedidoId){checkoutUrl}}`,
+        { pedidoId },
+      );
+      window.location.assign(iniciarPago.checkoutUrl);
+    } catch (e) {
+      setErrorPago(
+        e instanceof Error ? e.message : "No se pudo continuar con el pago.",
+      );
+      setPagando(null);
+    }
+  }
+
   return (
     <>
       <div className="section-heading">
@@ -37,6 +58,11 @@ export function Pedidos({ navegar }: { navegar: Navegar }) {
         />
       ) : (
         <div className="pedidos-lista">
+          {errorPago && (
+            <p className="auth-error" role="alert">
+              {errorPago}
+            </p>
+          )}
           {data.pedidos.map((p) => (
             <article className="pedido panel" key={p.id}>
               <div className="pedido-head">
@@ -55,9 +81,11 @@ export function Pedidos({ navegar }: { navegar: Navegar }) {
                   {
                     (
                       {
-                        CONFIRMADO: "Confirmado",
-                        PREPARANDO: "Preparando",
+                        PENDIENTE: "Pendiente de pago",
+                        PAGADO: "Pagado",
+                        ENVIADO: "Enviado",
                         ENTREGADO: "Entregado",
+                        CANCELADO: "Cancelado",
                       } as Record<string, string>
                     )[p.status]
                   }
@@ -71,7 +99,20 @@ export function Pedidos({ navegar }: { navegar: Navegar }) {
                   <strong>
                     {p.detalles.reduce((s, d) => s + d.cantidad, 0)} artículos
                   </strong>
-                  <p>Pago al recibir · Sin cobro real</p>
+                  <p>
+                    {p.metodoPago === "MERCADO_PAGO"
+                      ? "Mercado Pago"
+                      : "Pago al recibir"}
+                  </p>
+                  {p.status === "PENDIENTE" && (
+                    <button
+                      className="btn"
+                      disabled={pagando === p.id}
+                      onClick={() => continuarPago(p.id)}
+                    >
+                      {pagando === p.id ? "Abriendo…" : "Continuar con el pago"}
+                    </button>
+                  )}
                 </div>
                 <strong className="pedido-total">
                   {dinero(p.total)} <small>MXN</small>

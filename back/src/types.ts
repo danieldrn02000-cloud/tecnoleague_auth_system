@@ -6,6 +6,7 @@ export interface ProductoInput {
   precio: number;
   imagen: string;
   stock: number;
+  stockMinimo: number;
   marca: string;
   especificaciones: string;
   categoriaId: number;

@@ -7,7 +7,11 @@ import netlify from "@astrojs/netlify";
 
 export default defineConfig({
   output: "server",
-  adapter: netlify(),
+  adapter: netlify({
+  devFeatures: {
+    edgeFunctions: false,
+  },
+}),
   integrations: [react()],
   server: { host: "127.0.0.1", port: 5173, strictPort: true },
   vite: { plugins: [tailwindcss()] },

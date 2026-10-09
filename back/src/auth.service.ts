@@ -1,8 +1,9 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { Prisma, Usuario } from "@prisma/client";
 import { GraphQLError } from "graphql";
 import {
+  createHash,
   randomBytes,
   scrypt as scryptCallback,
   timingSafeEqual,
@@ -30,6 +31,8 @@ function fallo(message: string, code: string): never {
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly db: PrismaService,
     private readonly jwt: JwtService,
@@ -88,6 +91,117 @@ export class AuthService {
     };
   }
 
+  async solicitarRecuperacion(emailEntrada: string) {
+    const email = emailEntrada.trim().toLowerCase();
+    const usuario = await this.db.usuario.findUnique({ where: { email } });
+    if (usuario?.passwordHash) {
+      const token = randomBytes(32).toString("base64url");
+      await this.db.tokenRecuperacion.create({
+        data: {
+          usuarioId: usuario.id,
+          tokenHash: createHash("sha256").update(token).digest("hex"),
+          expiraEn: new Date(Date.now() + 60 * 60 * 1000),
+        },
+      });
+      await this.enviarEnlaceRecuperacion(email, token);
+    }
+    return true;
+  }
+
+  private async enviarEnlaceRecuperacion(email: string, token: string) {
+    const apiKey = process.env.RESEND_API_KEY?.trim();
+    const from = process.env.PASSWORD_RESET_FROM?.trim();
+    if (!apiKey || !from) {
+      this.logger.error(
+        "Recuperación no disponible: configura RESEND_API_KEY y PASSWORD_RESET_FROM.",
+      );
+      fallo(
+        "El correo de recuperación no está configurado.",
+        "PASSWORD_RESET_EMAIL_NOT_CONFIGURED",
+      );
+    }
+
+    let enlace: URL;
+    try {
+      const base = new URL(
+        process.env.PUBLIC_SITE_URL || "http://127.0.0.1:5173",
+      );
+      if (base.protocol !== "http:" && base.protocol !== "https:") {
+        throw new Error("PUBLIC_SITE_URL debe usar HTTP o HTTPS.");
+      }
+      enlace = new URL("/restablecer-contrasena", base);
+      enlace.searchParams.set("token", token);
+    } catch {
+      this.logger.error("Recuperación no disponible: PUBLIC_SITE_URL no es válido.");
+      fallo(
+        "La dirección pública del sitio no está configurada correctamente.",
+        "PASSWORD_RESET_SITE_URL_INVALID",
+      );
+    }
+
+    let response: Response;
+    try {
+      response = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from,
+          to: [email],
+          subject: "Restablece tu contraseña de TecnoLeague",
+          text: [
+            "Recibimos una solicitud para restablecer la contraseña de tu cuenta TecnoLeague.",
+            "",
+            `Abre este enlace para elegir una nueva contraseña: ${enlace.toString()}`,
+            "",
+            "El enlace vence en 1 hora. Si no solicitaste este cambio, ignora este correo.",
+          ].join("\n"),
+          html: `<p>Recibimos una solicitud para restablecer la contraseña de tu cuenta TecnoLeague.</p><p><a href="${enlace.toString()}">Crear una nueva contraseña</a></p><p>El enlace vence en 1 hora. Si no solicitaste este cambio, ignora este correo.</p>`,
+        }),
+        signal: AbortSignal.timeout(15000),
+      });
+    } catch (error) {
+      this.logger.error(
+        `Falló la conexión con Resend: ${error instanceof Error ? error.message : "error desconocido"}`,
+      );
+      fallo("No se pudo enviar el correo de recuperación.", "PASSWORD_RESET_EMAIL_FAILED");
+    }
+
+    if (!response.ok) {
+      this.logger.error(`Resend rechazó el correo (HTTP ${response.status}).`);
+      fallo("No se pudo enviar el correo de recuperación.", "PASSWORD_RESET_EMAIL_FAILED");
+    }
+  }
+
+  async restablecerPassword(token: string, password: string) {
+    if (password.length < 8 || password.length > 128) {
+      fallo("La contraseña debe tener entre 8 y 128 caracteres.", "BAD_USER_INPUT");
+    }
+    const registro = await this.db.tokenRecuperacion.findUnique({
+      where: { tokenHash: createHash("sha256").update(token).digest("hex") },
+    });
+    if (!registro || registro.usadoEn || registro.expiraEn < new Date()) {
+      fallo("El enlace no es válido o ya expiró.", "BAD_USER_INPUT");
+    }
+    const passwordHash = await this.hashPassword(password);
+    const usado = await this.db.$transaction(async (tx) => {
+      const marcado = await tx.tokenRecuperacion.updateMany({
+        where: { id: registro.id, usadoEn: null },
+        data: { usadoEn: new Date() },
+      });
+      if (marcado.count !== 1) return false;
+      await tx.usuario.update({
+        where: { id: registro.usuarioId },
+        data: { passwordHash },
+      });
+      return true;
+    });
+    if (!usado) fallo("El enlace no es válido o ya expiró.", "BAD_USER_INPUT");
+    return true;
+  }
+
   async usuarioActual(ctx: RequestContext): Promise<UsuarioPublico> {
     const valor = ctx.req.headers.authorization;
     const header = Array.isArray(valor) ? valor[0] : valor;
@@ -131,8 +245,11 @@ export class AuthService {
   }
 
   private crearToken(usuarioId: number) {
-    return this.jwt.sign({ sub: usuarioId });
-  }
+  return this.jwt.sign(
+    { sub: usuarioId },
+    { expiresIn: "7d" },
+  );
+}
 
   private verificarToken(token: string): number {
     try {

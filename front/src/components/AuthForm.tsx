@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { ArrowRight, KeyRound, Mail, UserRound } from "lucide-react";
 
 export function AuthForm({
@@ -13,16 +13,34 @@ export function AuthForm({
   const registro = mode === "registro";
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [email, setEmail] = useState("");
+  const [recordar, setRecordar] = useState(false);
+
+  useEffect(() => {
+    const guardado = localStorage.getItem("tl_email_recordado");
+    if (guardado && !registro) {
+      setEmail(guardado);
+      setRecordar(true);
+    }
+  }, [registro]);
 
   async function enviar(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (busy) return;
+    const form = new FormData(event.currentTarget);
+    const password = String(form.get("password") ?? "");
+    if (
+      registro &&
+      password !== String(form.get("confirmPassword") ?? "")
+    ) {
+      setError("Las contraseñas no coinciden.");
+      return;
+    }
     setBusy(true);
     setError("");
-    const form = new FormData(event.currentTarget);
     const datos: Record<string, string> = {
       email: String(form.get("email") ?? "").trim(),
-      password: String(form.get("password") ?? ""),
+      password,
     };
     if (registro) datos.nombre = String(form.get("nombre") ?? "").trim();
 
@@ -42,6 +60,10 @@ export function AuthForm({
       if (!response.ok) {
         setError(result?.error ?? "No se pudo validar la cuenta.");
         return;
+      }
+      if (!registro) {
+        if (recordar) localStorage.setItem("tl_email_recordado", datos.email);
+        else localStorage.removeItem("tl_email_recordado");
       }
       window.location.replace(next);
     } catch {
@@ -99,6 +121,8 @@ export function AuthForm({
               <input
                 name="email"
                 type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 autoComplete="email"
                 required
                 maxLength={150}
@@ -121,10 +145,39 @@ export function AuthForm({
               />
             </span>
           </label>
+          {registro && (
+            <label>
+              Confirmar contraseña
+              <span className="auth-input-wrap">
+                <KeyRound size={17} aria-hidden="true" />
+                <input
+                  name="confirmPassword"
+                  type="password"
+                  autoComplete="new-password"
+                  required
+                  minLength={8}
+                  maxLength={128}
+                  placeholder="Repite tu contraseña"
+                />
+              </span>
+            </label>
+          )}
           {error && (
             <p className="auth-error" role="alert">
               {error}
             </p>
+          )}
+          {!registro && (
+            <div className="auth-options">
+              <label className="auth-check">
+                <input
+                  type="checkbox"
+                  checked={recordar}
+                  onChange={(e) => setRecordar(e.target.checked)}
+                />
+                Recordar mis datos
+              </label>
+            </div>
           )}
           <button className="btn full" type="submit" disabled={busy}>
             {busy

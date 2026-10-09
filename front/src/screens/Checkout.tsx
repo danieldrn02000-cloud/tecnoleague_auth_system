@@ -8,7 +8,6 @@ import { Vacio } from "../components/ui";
 export function Checkout({
   currentUser,
   navegar,
-  completado,
 }: {
   currentUser: AuthUser;
   navegar: Navegar;
@@ -18,6 +17,7 @@ export function Checkout({
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const bloqueado = useRef(false);
+  const pedidoCreado = useRef<Pedido | null>(null);
   const solicitud = useRef({ contenido: "", clave: "" });
   if (!lineas.length)
     return (
@@ -48,12 +48,19 @@ export function Checkout({
     if (solicitud.current.contenido !== contenido)
       solicitud.current = { contenido, clave: crypto.randomUUID() };
     try {
+      if (!pedidoCreado.current) {
       const { crearPedido } = await graphql<{ crearPedido: Pedido }>(
         `mutation Comprar($datos:PedidoInput!){crearPedido(datos:$datos){${PEDIDO}}}`,
         { datos: { ...payload, claveSolicitud: solicitud.current.clave } },
       );
+      pedidoCreado.current = crearPedido;
+      }
+      const { iniciarPago } = await graphql<{ iniciarPago: { pagoId: number; checkoutUrl: string } }>(
+        `mutation Pagar($pedidoId:Int!){iniciarPago(pedidoId:$pedidoId){pagoId checkoutUrl}}`,
+        { pedidoId: pedidoCreado.current.id },
+      );
       vaciar();
-      completado(crearPedido);
+      window.location.assign(iniciarPago.checkoutUrl);
     } catch (e) {
       setError(
         e instanceof Error ? e.message : "No se pudo registrar el pedido.",
@@ -90,7 +97,7 @@ export function Checkout({
           <h2>
             <Truck size={22} /> Datos de entrega
           </h2>
-          <fieldset disabled={busy}>
+          <fieldset disabled={busy || !!pedidoCreado.current}>
             <label>
               Nombre completo
               <input
@@ -131,8 +138,8 @@ export function Checkout({
           <div className="pago">
             <Package size={23} />
             <div>
-              <strong>Pago al recibir</strong>
-              <p>Pedido académico. Sin tarjetas, cobros ni envíos reales.</p>
+              <strong>Mercado Pago — pruebas</strong>
+              <p>Se abrirá Mercado Pago. Usa el comprador y las tarjetas de prueba.</p>
             </div>
             <Check size={18} />
           </div>
@@ -151,7 +158,7 @@ export function Checkout({
         </div>
         <Resumen>
           <button type="submit" className="btn full" disabled={busy}>
-            {busy ? "Registrando pedido…" : "Confirmar pedido"}
+            {busy ? "Abriendo Mercado Pago…" : "Pagar con Mercado Pago"}
             <Check size={18} />
           </button>
           <p className="muted text-sm">
