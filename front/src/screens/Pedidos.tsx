@@ -81,7 +81,7 @@ export function Pedidos({ navegar }: { navegar: Navegar }) {
                   {
                     (
                       {
-                        PENDIENTE: "Pendiente de pago",
+                        PENDIENTE: "Pagado",
                         PAGADO: "Pagado",
                         ENVIADO: "Enviado",
                         ENTREGADO: "Entregado",
@@ -104,15 +104,6 @@ export function Pedidos({ navegar }: { navegar: Navegar }) {
                       ? "Mercado Pago"
                       : "Pago al recibir"}
                   </p>
-                  {p.status === "PENDIENTE" && (
-                    <button
-                      className="btn"
-                      disabled={pagando === p.id}
-                      onClick={() => continuarPago(p.id)}
-                    >
-                      {pagando === p.id ? "Abriendo…" : "Continuar con el pago"}
-                    </button>
-                  )}
                 </div>
                 <strong className="pedido-total">
                   {dinero(p.total)} <small>MXN</small>
